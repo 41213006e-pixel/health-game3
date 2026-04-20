@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康知識大挑戰</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        #game-container {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #progress {
+            width: 0%;
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        h1 { color: var(--primary-color); margin-bottom: 1rem; }
+        
+        #question-text {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .options-container {
+            display: grid;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background-color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            border-color: var(--secondary-color);
+            background-color: #e3f2fd;
+        }
+
+        button.correct {
+            background-color: #c8e6c9;
+            border-color: #4CAF50;
+        }
+
+        button.wrong {
+            background-color: #ffcdd2;
+            border-color: #f44336;
+        }
+
+        #score-board, #result-screen { display: none; }
+        
+        .btn-next {
+            margin-top: 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            display: none;
+        }
+
+        .restart-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="quiz-screen">
+        <div class="progress-bar"><div id="progress"></div></div>
+        <div id="question-count">題目 1 / 5</div>
+        <p id="question-text">載入中...</p>
+        <div class="options-container" id="options"></div>
+        <button class="btn-next" id="next-btn" onclick="nextQuestion()">下一題</button>
+    </div>
+
+    <div id="result-screen">
+        <h2>測試完成！</h2>
+        <p style="font-size: 1.5rem;">你的得分是：<span id="final-score">0</span> / 100</p>
+        <p id="feedback-msg"></p>
+        <button class="restart-btn" onclick="restartGame()">再玩一次</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            q: "成人每日建議飲水量（毫升）計算公式通常是體重(kg)乘以多少？",
+            options: ["10ml", "20ml", "30-35ml", "50ml"],
+            correct: 2
+        },
+        {
+            q: "哪種維生素可以幫助視力，且在胡蘿蔔中含量豐富？",
+            options: ["維生素A", "維生素C", "維生素D", "維生素K"],
+            correct: 0
+        },
+        {
+            q: "正常的收縮壓（高壓）應低於多少 mmHg？",
+            options: ["140", "120", "100", "160"],
+            correct: 1
+        },
+        {
+            q: "下列哪一項不是良好的睡眠習慣？",
+            options: ["規律運動", "睡前用手機", "保持臥室涼爽", "固定睡覺時間"],
+            correct: 1
+        },
+        {
+            q: "心肺復甦術(CPR)的胸外按壓頻率應為每分鐘幾次？",
+            options: ["60-80次", "80-100次", "100-120次", "140次以上"],
+            correct: 2
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options');
+    const nextBtn = document.getElementById('next-btn');
+    const progress = document.getElementById('progress');
+    const questionCount = document.getElementById('question-count');
+
+    function loadQuestion() {
+        answered = false;
+        nextBtn.style.display = 'none';
+        const currentData = quizData[currentIdx];
+        
+        questionText.innerText = currentData.q;
+        questionCount.innerText = `題目 ${currentIdx + 1} / ${quizData.length}`;
+        progress.style.width = `${((currentIdx) / quizData.length) * 100}%`;
+        
+        optionsContainer.innerHTML = '';
+        currentData.options.forEach((opt, i) => {
+            const btn = document.createElement('button');
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(i, btn);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selected, btn) {
+        if(answered) return;
+        answered = true;
+        
+        const correctIdx = quizData[currentIdx].correct;
+        const allBtns = optionsContainer.querySelectorAll('button');
+
+        if(selected === correctIdx) {
+            btn.classList.add('correct');
+            score += (100 / quizData.length);
+        } else {
+            btn.classList.add('wrong');
+            allBtns[correctIdx].classList.add('correct');
+        }
+
+        nextBtn.style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if(currentIdx < quizData.length) {
+            loadQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('final-score').innerText = score;
+        
+        let msg = "";
+        if(score >= 80) msg = "太棒了！你是健康達人！";
+        else if(score >= 60) msg = "還不錯，再接再厲！";
+        else msg = "要多注意健康知識喔！";
+        document.getElementById('feedback-msg').innerText = msg;
+    }
+
+    function restartGame() {
+        currentIdx = 0;
+        score = 0;
+        document.getElementById('quiz-screen').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        loadQuestion();
+    }
+
+    // 初始化遊戲
+    loadQuestion();
+</script>
+
+</body>
+</html>
